@@ -27,9 +27,9 @@ class EasyWebServer {
     const char *verb = NULL;		 // A string that will contain the VERB (GET, POST)
     const char *url = NULL;          // The URL of the request, without any querystring.
 	const char *querystring = NULL;  // The qyerystring, everything behind the questionmark.
-	EthernetClient client;           // A reference to the EthernetClient object to work with.
-	
-	EasyWebServer(EthernetClient &client);  
+	Client& client;           // A reference to the Client object to work with.
+
+	EasyWebServer(Client &client);
     ~EasyWebServer();
     
 	void serveUrl(const char* url, EwsRequestHandler func, EwsContentType contentType);
@@ -42,7 +42,7 @@ class EasyWebServer {
 };
 
 
-EasyWebServer::EasyWebServer(EthernetClient &ec):client(ec){
+EasyWebServer::EasyWebServer(Client &ec):client(ec){
 
   /* READ THE REQUEST */
   bool firstChar = true;         // Keep track of line beginnings to see the empty line marking end of header.
