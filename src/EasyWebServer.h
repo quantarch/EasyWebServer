@@ -15,8 +15,8 @@ EasyWebServer.h AFTER the Ethernet library in your source code.
 #ifndef EasyWebServer_h
 #define EasyWebServer_h
 
-#define EWS_REQUEST_BUF_LEN 25 // Adjust this to support longer URLs.
- 
+#define EWS_REQUEST_BUF_LEN 128 // Adjust this to support longer URLs.
+
 class EasyWebServer;    // Forward declaration, needed for typedef below.
 
 typedef void (*EwsRequestHandler)(EasyWebServer &w);
@@ -26,7 +26,11 @@ class EasyWebServer {
   public:
     const char *verb = NULL;		 // A string that will contain the VERB (GET, POST)
     const char *url = NULL;          // The URL of the request, without any querystring.
-	const char *querystring = NULL;  // The qyerystring, everything behind the questionmark.
+	const char *querystring = NULL;  // The querystring, everything behind the questionmark.
+   char **queryVarName = NULL; // list of Strings for individual varaible names. index matches value in queryVarValue
+   char **queryVarValue = NULL; // list of Strings for individual values. index matches name in queryVarName
+   char *tokenizedQueryString = NULL;
+   int countQueryVars = 0;
 	Client& client;           // A reference to the Client object to work with.
 
 	EasyWebServer(Client &client);
@@ -34,11 +38,14 @@ class EasyWebServer {
     
 	void serveUrl(const char* url, EwsRequestHandler func, EwsContentType contentType);
 	void redirect(const char* url, const char* newurl);
-	
+   const char* getValue(const char* varName);
+
   private:
     char _request[EWS_REQUEST_BUF_LEN]; // A buffer to store the HTTP request.
     void disconnect();                  // Close the client connection.
 	void throwError(const __FlashStringHelper *error); // HTTP error response.
+   void clearQueryVars();
+   void parseQueryVars();
 };
 
 
@@ -68,6 +75,9 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
     } 
   } 
   
+  /* RESET QUERY REQUEST VARS */
+  clearQueryVars();
+
   /* PARSE THE REQUEST */
   int rlen = min(i, EWS_REQUEST_BUF_LEN - 1); // Calculate the request length
   _request[rlen]='\0';			              // At least one string terminator in the buffer.
@@ -95,9 +105,12 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
 	q[0]='\0';                                
 	querystring = q + 1;
   }
-  
-  // Reject all HTTP verbs except GET 
-  if (strcmp(verb, "GET")!=0) { 
+
+  // PARSE querystring into individual variables
+  parseQueryVars();
+
+  // Reject all HTTP verbs except GET
+  if (strcmp(verb, "GET")!=0) {
     throwError(F("405 Method Not Allowed"));
     disconnect();
     return;
@@ -174,5 +187,72 @@ void EasyWebServer::throwError(const __FlashStringHelper* error){
 	client.print(F("</body></html>"));
     disconnect();
 }
+
+void EasyWebServer::clearQueryVars()
+{
+   if (NULL != queryVarName)
+   {
+      free(queryVarName);
+   }
+   queryVarName = NULL;
+   if (NULL != queryVarValue)
+   {
+      free(queryVarValue);
+   }
+   queryVarValue = NULL;
+   if (NULL != tokenizedQueryString)
+   {
+      free(tokenizedQueryString);
+   }
+   tokenizedQueryString = NULL;
+   countQueryVars = 0;
+}
+
+void EasyWebServer::parseQueryVars()
+{
+   clearQueryVars();
+
+   if (NULL != querystring)
+   {
+      tokenizedQueryString = new char[strlen(querystring)+1];
+      char *p = tokenizedQueryString;
+      strcpy(p, querystring);
+      char *str;
+      while ((str = strtok_r(p, "&", &p)) != NULL)
+      {
+         countQueryVars++;
+         if (NULL == queryVarName)
+         {
+            queryVarName = (char**) malloc(sizeof(char*)*countQueryVars);
+         }
+         else
+         {
+            queryVarName = (char**) realloc(queryVarName, sizeof(char*)*countQueryVars);
+         }
+         queryVarName[countQueryVars-1] = str;
+      }
+      queryVarValue = (char**) malloc(sizeof(char*)*countQueryVars);
+      for (int j = 0; j < countQueryVars; j++)
+      {
+         p = queryVarName[j];
+         str = strtok_r(p, "=", &p); // terminate variable name
+         queryVarValue[j] = strtok_r(p, "=", &p); // find variable value
+      }
+   }
+}
+
+const char* EasyWebServer::getValue(const char* varName)
+{
+   char* returnValue = NULL;
+   for (int j = 0; j < countQueryVars; j++)
+   {
+      if (strcmp(varName, queryVarName[j]) == 0)
+      {
+         returnValue = queryVarValue[j];
+      }
+   }
+   return returnValue;
+}
+
 
 #endif
