@@ -1,8 +1,13 @@
+// Uncomment the next line if you are using an ATWINC1500 based board.
+//#define USE_ATWINC1500
+// Some platforms need this next line commented if wifi is built in and platform did not set shield present status.
+// #define CHECK_FOR_WIFI_SHIELD
 
-// Includes for ATWINC1500 WiFi
+#ifdef USE_ATWINC1500
 #include <WiFi101.h>
-#include <WiFiClient.h>
-#include <WiFiServer.h>
+#else
+#include <WiFi.h>
+#endif
 
 #include <EasyWebServer.h> // Must be included AFTER the ethernet libraries. See comment in EasyWebServer.h.
 
@@ -13,30 +18,38 @@
 // (port 80 is default for HTTP):
 WiFiServer server(80);
 
+// take care to set these pins for your platform.  Adverse side effects may occur otherwise.
 int digitalPins[] = {3, 5, 6};
-//int digitalPints[] = {2, 3, 4, 5, 6, 7, 8};
 int countDigitalPins = sizeof(digitalPins) / sizeof(int);
 
 void setup() {
-   //Configure pins for Adafruit ATWINC1500 Feather
-   // uncomment the next line if using the Adafruit board.
+  // Add your board specific pins as needed for ATWINC1500 based platforms.
+   #if defined(USE_ATWINC1500)
+   #if defined(ARDUINO_SAMD_FEATHER_M0)
    WiFi.setPins(8,7,4,2);
+   // #elif defined(ARDUINO_YOUR_PLATFORM)
+   #endif
+   #endif
 
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
   while (!Serial) { ; } // wait for serial port to connect. Needed for native USB port only
 
+  Serial.println("Started");
+
+  #ifdef CHECK_FOR_WIFI_SHIELD
   if (WiFi.status() == WL_NO_SHIELD)
   {
     Serial.println("WiFi shield not present");
     // don't continue:
     while (true);
   }
+  #endif
   // Start the Ethernet connection and the server:
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   server.begin();
   Serial.print("Server is at ");
- 
+
   while (WiFi.localIP() == INADDR_NONE) {
     Serial.print(".");
     delay(300);

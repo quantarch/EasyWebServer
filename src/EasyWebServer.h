@@ -5,15 +5,20 @@ EasyWebServer - A simple lightweight web server for arduino.
 k@llelundberg.se - http://techblog.se/
 
 This web server works on top of the EthernetClient class, defined in Ethernet.h.
-Since there are Other network libraries (e.g. UIPEthernet.h) the headers can not 
+Since there are Other network libraries (e.g. UIPEthernet.h) the headers can not
 be included from this file.
 
-Thats why this file contains both declaration and implementarion. You need include 
+Thats why this file contains both declaration and implementarion. You need include
 EasyWebServer.h AFTER the Ethernet library in your source code.
- 
+
 */
 #ifndef EasyWebServer_h
 #define EasyWebServer_h
+
+// fix for ESP builds
+#ifndef min
+#define min(a, b) ((a) < (b) ? (a) : (b))
+#endif
 
 #define EWS_REQUEST_BUF_LEN 128 // Adjust this to support longer URLs.
 
@@ -35,7 +40,7 @@ class EasyWebServer {
 
 	EasyWebServer(Client &client);
     ~EasyWebServer();
-    
+
 	void serveUrl(const char* url, EwsRequestHandler func, EwsContentType contentType);
 	void redirect(const char* url, const char* newurl);
    const char* getValue(const char* varName);
@@ -59,9 +64,9 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
     if (client.available()) {    // Client data available to read?
 
       char c = client.read();    // Read 1 byte (character) from client
-      if (i < EWS_REQUEST_BUF_LEN) 
+      if (i < EWS_REQUEST_BUF_LEN)
         _request[i] = c;         // Add the char to the global request buffer
-      
+
       i++;                       // Increase the byte counter.
 
       if (c == '\n') {           // If this char is a end-of-line...
@@ -72,9 +77,9 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
       if (c != '\n' && c != '\r') // If the char is not a line ending character...
         firstChar = false;        // ...the next char is not going to be the first char of a line.
 
-    } 
-  } 
-  
+    }
+  }
+
   /* RESET QUERY REQUEST VARS */
   clearQueryVars();
 
@@ -89,20 +94,20 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
 	  throwError(F("400 Bad Request"));
 	  return;
   }
-  verb = _request;                            
+  verb = _request;
   spc1[0]='\0';								  // Terminate the verb string
-  
+
   spc2 = strchr(spc1+1,' ');                  // Search for the space that after the URL
   if(spc2==NULL){
     throwError(F("414 Request-URI Too Long"));
 	return;
   }
-  url = spc1 + 1;             
+  url = spc1 + 1;
   spc2[0] = '\0';                             // Terminate the URL string.
-  
+
   q = strchr(spc1+1,'?');                     // Search for a question mark inside the URL
-  if(q!=NULL){								  
-	q[0]='\0';                                
+  if(q!=NULL){
+	q[0]='\0';
 	querystring = q + 1;
   }
 
@@ -118,14 +123,14 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
 }
 
 void EasyWebServer::serveUrl(const char* url, EwsRequestHandler func, const EwsContentType responseContentType=EWS_TYPE_HTML){
-  
-  
+
+
   if(client){
 	Serial.print("serveUrl");
 	Serial.print(url);
-  
+
     // Compare the url parameter with the url in the http request.
-    if(strcmp(this->url,url)==0){ 
+    if(strcmp(this->url,url)==0){
 
       // Write the response header
       client.println(F("HTTP/1.1 200 OK"));                 // Normal HTTP response.
@@ -136,13 +141,13 @@ void EasyWebServer::serveUrl(const char* url, EwsRequestHandler func, const EwsC
         client.println(F("Content-Type: text/plain; charset=utf-8"));      // Content type is set to plain text
       else
         client.println(F("Content-Type: text/html; charset=utf-8"));       // Content type is set to HTML (default)
-      
+
       client.println();                                     // Empty line to indicate the end of the header.
-  
+
       func(*this);         // Call the specified function and pass the current object as parameter.
 
       disconnect();          // Disconnect the TCP connection
-    
+
     }
   }
 }
@@ -151,9 +156,9 @@ void EasyWebServer::redirect(const char* url, const char* newurl){
   if(client){
 
 	// Compare the url parameter with the url in the http request.
-    if(strcmp(this->url,url)==0){ 
-	  client.println(F("HTTP/1.1 301 Moved Permanently"));  
-	  client.println(F("Connection: close"));               
+    if(strcmp(this->url,url)==0){
+	  client.println(F("HTTP/1.1 301 Moved Permanently"));
+	  client.println(F("Connection: close"));
 	  client.print(F("Location: "));
 	  client.println(newurl);
 	  client.println();
@@ -177,7 +182,7 @@ void EasyWebServer::disconnect(){
 void EasyWebServer::throwError(const __FlashStringHelper* error){
     client.print(F("HTTP/1.1 "));
 	client.println(error);
-    client.println(F("Connection: close"));                
+    client.println(F("Connection: close"));
     client.println(F("Content-Type: text/html"));
     client.println();
     client.print(F("<html><head><title>"));
