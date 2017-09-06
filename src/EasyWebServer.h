@@ -125,9 +125,12 @@ EasyWebServer::EasyWebServer(Client &ec):client(ec){
 void EasyWebServer::serveUrl(const char* url, EwsRequestHandler func, const EwsContentType responseContentType=EWS_TYPE_HTML){
 
 
-  if(client){
+  if(client)
+  {
+   #ifdef DEBUG_SERIAL
 	Serial.print("serveUrl");
 	Serial.print(url);
+   #endif
 
     // Compare the url parameter with the url in the http request.
     if(strcmp(this->url,url)==0){
