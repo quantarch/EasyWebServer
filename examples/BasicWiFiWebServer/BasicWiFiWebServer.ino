@@ -5,6 +5,8 @@
 
 #ifdef USE_ATWINC1500
 #include <WiFi101.h>
+#elif defined(ESP8266)
+#include <ESP8266WiFi.h>
 #else
 #include <WiFi.h>
 #endif
