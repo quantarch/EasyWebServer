@@ -171,6 +171,7 @@ void EasyWebServer::redirect(const char* url, const char* newurl){
 }
 
 EasyWebServer::~EasyWebServer(){
+   clearQueryVars();
   if(client){
 	throwError(F("404 Not Found")); // If no URL has been served, throw a 404.
   }
@@ -220,9 +221,14 @@ void EasyWebServer::parseQueryVars()
 {
    clearQueryVars();
 
+   int queryStringLen = 0;
    if (NULL != querystring)
    {
-      tokenizedQueryString = new char[strlen(querystring)+1];
+      queryStringLen = strlen(querystring);
+   }
+   if (queryStringLen > 0)
+   {
+      tokenizedQueryString = (char*) malloc(queryStringLen+1);
       char *p = tokenizedQueryString;
       strcpy(p, querystring);
       char *str;
